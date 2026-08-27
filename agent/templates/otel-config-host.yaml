@@ -1,0 +1,105 @@
+extensions:
+  file_storage:
+    directory: /var/lib/opspika-agent/storage
+    timeout: 10s
+    fsync: true
+    create_directory: true
+    compaction:
+      on_start: true
+      on_rebound: true
+      directory: /var/lib/opspika-agent/compaction
+      cleanup_on_start: true
+  health_check:
+    endpoint: 127.0.0.1:13134
+
+receivers:
+  hostmetrics:
+    collection_interval: 15s
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      disk:
+      filesystem:
+        exclude_fs_types:
+          fs_types:
+            - autofs
+            - binfmt_misc
+            - bpf
+            - cgroup
+            - cgroup2
+            - configfs
+            - debugfs
+            - devpts
+            - devtmpfs
+            - fusectl
+            - hugetlbfs
+            - mqueue
+            - overlay
+            - proc
+            - pstore
+            - securityfs
+            - selinuxfs
+            - squashfs
+            - sysfs
+            - tracefs
+          match_type: strict
+      load:
+      memory:
+      network:
+      paging:
+      processes:
+      system:
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  resourcedetection/system:
+    detectors: [system]
+    override: false
+    system:
+      hostname_sources: [os]
+  resource/identity:
+    attributes:
+      - key: host.name
+        value: __SERVER_NAME__
+        action: upsert
+      - key: deployment.environment.name
+        value: __ENVIRONMENT__
+        action: upsert
+      - key: service.namespace
+        value: opspika
+        action: upsert
+  batch:
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+    timeout: 5s
+
+exporters:
+  otlphttp/openobserve_metrics:
+    endpoint: ${env:OPENOBSERVE_OTLP_ENDPOINT}
+    headers:
+      Authorization: "Basic ${env:OPENOBSERVE_AUTHORIZATION_KEY}"
+    compression: gzip
+    timeout: 10s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 0s
+    sending_queue:
+      enabled: true
+      storage: file_storage
+      queue_size: 5000
+      block_on_overflow: true
+
+service:
+  extensions: [file_storage, health_check]
+  pipelines:
+    metrics:
+      receivers: [hostmetrics]
+      processors: [memory_limiter, resourcedetection/system, resource/identity, batch]
+      exporters: [otlphttp/openobserve_metrics]

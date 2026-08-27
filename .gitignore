@@ -1,0 +1,30 @@
+# Runtime configuration and credentials
+central/.env
+central/.env.backup.*
+central/.root-password
+agent/*.env
+*.token
+
+# Generated data and backups
+central/backups/
+central/data/
+*.tar.gz
+*.sha256
+*.exe
+*.dll
+*.msi
+*.deb
+*.rpm
+*.zip
+*.tar.xz
+
+# Local tooling
+node_modules/
+.tmp/
+/.superstack/
+
+# Local implementation tracking; keep these out of the future Git repository.
+/_IMPLEMENTATION_*
+/IMPLEMENTATION_*
+/implementation_*
+/implementtatiyon_*

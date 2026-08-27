@@ -1,0 +1,28 @@
+[Unit]
+Description=OpsPika Agent
+Documentation=https://opentelemetry.io/docs/collector/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=opspika-agent
+Group=opspika-agent
+EnvironmentFile=/etc/opspika-agent/agent.env
+ExecStart=/usr/local/bin/opspika-otelcol --config=/etc/opspika-agent/config.yaml
+Restart=always
+RestartSec=10
+LimitNOFILE=65535
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths=/var/lib/opspika-agent
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

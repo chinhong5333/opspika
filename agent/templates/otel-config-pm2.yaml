@@ -1,0 +1,165 @@
+extensions:
+  file_storage:
+    directory: /var/lib/opspika-agent/storage
+    timeout: 10s
+    fsync: true
+    create_directory: true
+    compaction:
+      on_start: true
+      on_rebound: true
+      directory: /var/lib/opspika-agent/compaction
+      cleanup_on_start: true
+  health_check:
+    endpoint: 127.0.0.1:13134
+
+receivers:
+  hostmetrics:
+    collection_interval: 15s
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      disk:
+      filesystem:
+        exclude_fs_types:
+          fs_types:
+            - autofs
+            - binfmt_misc
+            - bpf
+            - cgroup
+            - cgroup2
+            - configfs
+            - debugfs
+            - devpts
+            - devtmpfs
+            - fusectl
+            - hugetlbfs
+            - mqueue
+            - overlay
+            - proc
+            - pstore
+            - securityfs
+            - selinuxfs
+            - squashfs
+            - sysfs
+            - tracefs
+          match_type: strict
+      load:
+      memory:
+      network:
+      paging:
+      processes:
+      system:
+
+  prometheus/pm2:
+    config:
+      scrape_configs:
+        - job_name: pm2
+          scrape_interval: 15s
+          scrape_timeout: 5s
+          static_configs:
+            - targets: [127.0.0.1:9988]
+
+  filelog/pm2:
+    include:
+      - __PM2_HOME__/logs/*.log
+    exclude:
+      - __PM2_HOME__/logs/*.gz
+      - __PM2_HOME__/logs/opspika-process-exporter-*.log
+    start_at: end
+    include_file_name: true
+    include_file_path: true
+    storage: file_storage
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 0s
+    operators:
+      - type: add
+        field: attributes["log.source"]
+        value: pm2
+      - type: regex_parser
+        id: parse_pm2_filename
+        parse_from: attributes["log.file.name"]
+        if: 'attributes["log.file.name"] matches "^.+-(out|error)(-[0-9]+)?\\.log$"'
+        regex: '^(?P<pm2_app>.+)-(?P<pm2_stream>out|error)(?:-(?P<pm2_instance>[0-9]+))?\.log$'
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  resourcedetection/system:
+    detectors: [system]
+    override: false
+    system:
+      hostname_sources: [os]
+  resource/identity:
+    attributes:
+      - key: host.name
+        value: __SERVER_NAME__
+        action: upsert
+      - key: deployment.environment.name
+        value: __ENVIRONMENT__
+        action: upsert
+      - key: service.namespace
+        value: opspika
+        action: upsert
+  attributes/pm2_logs:
+    actions:
+      - key: log.source
+        value: pm2
+        action: upsert
+  batch:
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+    timeout: 5s
+
+exporters:
+  otlphttp/openobserve_metrics:
+    endpoint: ${env:OPENOBSERVE_OTLP_ENDPOINT}
+    headers:
+      Authorization: "Basic ${env:OPENOBSERVE_AUTHORIZATION_KEY}"
+    compression: gzip
+    timeout: 10s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 0s
+    sending_queue:
+      enabled: true
+      storage: file_storage
+      queue_size: 5000
+      block_on_overflow: true
+  otlphttp/openobserve_pm2_logs:
+    endpoint: ${env:OPENOBSERVE_OTLP_ENDPOINT}
+    headers:
+      Authorization: "Basic ${env:OPENOBSERVE_AUTHORIZATION_KEY}"
+      stream-name: pm2_logs
+    compression: gzip
+    timeout: 10s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 0s
+    sending_queue:
+      enabled: true
+      storage: file_storage
+      queue_size: 5000
+      block_on_overflow: true
+
+service:
+  extensions: [file_storage, health_check]
+  pipelines:
+    metrics:
+      receivers: [hostmetrics, prometheus/pm2]
+      processors: [memory_limiter, resourcedetection/system, resource/identity, batch]
+      exporters: [otlphttp/openobserve_metrics]
+    logs/pm2:
+      receivers: [filelog/pm2]
+      processors: [memory_limiter, resourcedetection/system, resource/identity, attributes/pm2_logs, batch]
+      exporters: [otlphttp/openobserve_pm2_logs]

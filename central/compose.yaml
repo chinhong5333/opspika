@@ -1,0 +1,32 @@
+name: opspika
+
+services:
+  openobserve:
+    image: ${OPENOBSERVE_IMAGE:?Set OPENOBSERVE_IMAGE in central/.env}
+    container_name: opspika-openobserve
+    restart: unless-stopped
+    environment:
+      ZO_LOCAL_MODE: "true"
+      ZO_DATA_DIR: /data
+      ZO_ROOT_USER_EMAIL: ${ZO_ROOT_USER_EMAIL:?Set ZO_ROOT_USER_EMAIL in central/.env}
+      ZO_ROOT_USER_PASSWORD: ${ZO_ROOT_USER_PASSWORD:?Set ZO_ROOT_USER_PASSWORD in central/.env}
+      ZO_COMPACT_DATA_RETENTION_DAYS: ${ZO_COMPACT_DATA_RETENTION_DAYS:-180}
+      RUST_LOG: ${OPENOBSERVE_LOG_LEVEL:-info}
+    ports:
+      - "${OPENOBSERVE_BIND_ADDRESS:-127.0.0.1}:${OPENOBSERVE_HTTP_PORT:-5080}:5080"
+    volumes:
+      - openobserve-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+
+volumes:
+  openobserve-data:
+    name: opspika-openobserve-data
