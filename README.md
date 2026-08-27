@@ -2,9 +2,13 @@
 
 > Self-hosted server health, process metrics, and searchable logs.
 
-OpsPika monitors Ubuntu host health and applications managed by PM2. It uses a
-single OpenObserve OSS container centrally and one hardened OpenTelemetry-based
-agent on every monitored server.
+OpsPika is a self-hosted Ubuntu server monitoring system. It monitors host
+health on any Ubuntu server and, when PM2 is present, can additionally collect
+per-application process metrics and searchable logs. PM2 is optional and does
+not host OpsPika.
+
+OpsPika Central runs as a single OpenObserve OSS container. Every monitored
+server runs a hardened OpenTelemetry-based agent through `systemd`.
 
 ## Status
 
@@ -16,18 +20,20 @@ against the live OpenObserve schema.
 ## Architecture
 
 ```text
-Monitored Ubuntu servers                 OpsPika Central
+Monitored Ubuntu server                  OpsPika Central
 ----------------------------------       ----------------------------
-OpsPika Agent ---------------- OTLP ---> OpenObserve OSS
-OpsPika Process Exporter                 Persistent Docker volume
-pm2-logrotate                            OpsPika Agent (self-monitoring)
+OpsPika Agent (always) ------- OTLP ---> OpenObserve OSS
+                                         Persistent Docker volume
+Optional when PM2 is present:            OpsPika Agent (self-monitoring)
+  OpsPika Process Exporter
+  pm2-logrotate
 ```
 
 Installed runtime names:
 
 - **OpsPika Central** — OpenObserve and its persistent volume.
 - **OpsPika Agent** — host metrics, log collection, buffering, and delivery.
-- **OpsPika Process Exporter** — local PM2 process measurements.
+- **OpsPika Process Exporter** — optional local PM2 process measurements.
 
 ## Quick Installation
 

@@ -6,7 +6,7 @@
 
 ## 1. Executive Summary
 
-OpsPika is a self-hosted monitoring platform for Linux servers running PM2. It must provide complete host statistics, per-PM2-process statistics, searchable PM2 logs, dashboards, alerts, and organization-scoped user administration.
+OpsPika is a self-hosted monitoring platform for Ubuntu servers. It provides complete host statistics without requiring PM2. On servers already running PM2, it additionally provides per-process statistics and searchable PM2 logs. The platform also provides dashboards, alerts, and organization-scoped user administration. PM2 is an optional integration and does not host OpsPika.
 
 The recommended simplified architecture is:
 
