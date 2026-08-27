@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly DEFAULT_IMAGE="public.ecr.aws/zinclabs/openobserve:v0.90.3"
+readonly DEFAULT_IMAGE="public.ecr.aws/zinclabs/openobserve:v0.90.3@sha256:f77856199bff2097e0355d66e59d5792064ff8ff831ea5f580b3650fa5457136"
 readonly DEFAULT_BIND_ADDRESS="127.0.0.1"
 readonly DEFAULT_HTTP_PORT="5080"
 readonly DEFAULT_RETENTION_DAYS="180"
+readonly DEFAULT_VOLUME_NAME="opspika-openobserve-data"
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 central_dir=$(cd -- "${script_dir}/.." && pwd)
@@ -16,7 +17,22 @@ image=${DEFAULT_IMAGE}
 bind_address=${DEFAULT_BIND_ADDRESS}
 http_port=${DEFAULT_HTTP_PORT}
 retention_days=${DEFAULT_RETENTION_DAYS}
+volume_name=${DEFAULT_VOLUME_NAME}
 force_reconfigure=false
+env_backup=""
+
+# shellcheck disable=SC2317 # Invoked indirectly by the ERR trap.
+rollback_reconfigure() {
+  local exit_code=$?
+  trap - ERR
+  if [[ -n ${env_backup} && -f ${env_backup} ]]; then
+    cp -a -- "${env_backup}" "${env_file}"
+    echo "Restored the previous central configuration after failed reconfiguration." >&2
+    docker compose --env-file "${env_file}" -f "${central_dir}/compose.yaml" up -d >&2 || true
+  fi
+  exit "${exit_code}"
+}
+trap rollback_reconfigure ERR
 
 usage() {
   cat <<'EOF'
@@ -33,6 +49,7 @@ Options:
   --bind-address IPV4            Host address for port 5080 (default 127.0.0.1).
   --http-port PORT               Host HTTP port (default 5080).
   --retention-days DAYS          Global retention in days (default 180, minimum 3).
+  --volume-name NAME             Docker volume name (default opspika-openobserve-data).
   --force-reconfigure            Replace an existing central/.env file.
   --help                         Show this help.
 EOF
@@ -70,6 +87,11 @@ while [[ $# -gt 0 ]]; do
       retention_days=$2
       shift 2
       ;;
+    --volume-name)
+      [[ $# -ge 2 ]] || { echo "--volume-name requires a value." >&2; exit 2; }
+      volume_name=$2
+      shift 2
+      ;;
     --force-reconfigure)
       force_reconfigure=true
       shift
@@ -98,12 +120,21 @@ if [[ ! ${bind_address} =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
   echo "--bind-address must be an IPv4 address such as 127.0.0.1." >&2
   exit 2
 fi
-if [[ ! ${http_port} =~ ^[0-9]+$ ]] || (( http_port < 1 || http_port > 65535 )); then
+if [[ ! ${http_port} =~ ^[0-9]+$ ]]; then
+  echo "--http-port must be between 1 and 65535." >&2
+  exit 2
+fi
+http_port_number=$((10#${http_port}))
+if (( http_port_number < 1 || http_port_number > 65535 )); then
   echo "--http-port must be between 1 and 65535." >&2
   exit 2
 fi
 if [[ ! ${retention_days} =~ ^[0-9]+$ ]] || (( retention_days < 3 )); then
   echo "--retention-days must be an integer of at least 3." >&2
+  exit 2
+fi
+if [[ ! ${volume_name} =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{2,127}$ ]]; then
+  echo "--volume-name must contain 3-128 safe Docker volume-name characters." >&2
   exit 2
 fi
 if [[ ! ${image} =~ ^[A-Za-z0-9./:_@-]+$ ]] || [[ ${image} == *":latest" ]]; then
@@ -160,6 +191,7 @@ cat >"${env_file}" <<EOF
 OPENOBSERVE_IMAGE=${image}
 OPENOBSERVE_BIND_ADDRESS=${bind_address}
 OPENOBSERVE_HTTP_PORT=${http_port}
+OPENOBSERVE_VOLUME_NAME=${volume_name}
 ZO_ROOT_USER_EMAIL=${root_email}
 ZO_ROOT_USER_PASSWORD=${root_password}
 ZO_COMPACT_DATA_RETENTION_DAYS=${retention_days}
@@ -191,6 +223,8 @@ for _ in $(seq 1 60); do
     else
       echo "The service is listening on ${bind_address}:${http_port}. Restrict it with a firewall and add HTTPS before production use."
     fi
+    "${script_dir}/provision-dashboards.sh" --env-file "${env_file}" --organization default
+    trap - ERR
     exit 0
   fi
   sleep 2

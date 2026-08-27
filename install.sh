@@ -71,6 +71,7 @@ install_central() {
       -f "${repo_dir}/central/compose.yaml" \
       up -d
     "${repo_dir}/central/scripts/verify-central.sh"
+    "${repo_dir}/central/scripts/provision-dashboards.sh"
     echo "Central installation is already configured and healthy."
     return
   fi
@@ -152,7 +153,7 @@ install_agent() {
     && [[ ${base_url} != http://127.0.0.1:* ]] \
     && [[ ${base_url} != http://localhost:* ]]; then
     local insecure_confirmation
-    read -r -p "This is non-loopback HTTP. Type ALLOW for a private-network proof of concept: " insecure_confirmation
+    read -r -p "This is non-loopback HTTP. Type ALLOW only for an isolated private-network evaluation: " insecure_confirmation
     if [[ ${insecure_confirmation} != "ALLOW" ]]; then
       echo "Cancelled. Configure HTTPS or explicitly confirm private HTTP." >&2
       exit 2
@@ -181,14 +182,14 @@ install_agent() {
   fi
 
   "${repo_dir}/agent/install-monitoring-agent.sh" "${installer_args[@]}"
-  "${repo_dir}/agent/verify-monitoring-agent.sh"
+  "${repo_dir}/agent/run-acceptance-test.sh"
 
   rm -f -- "${key_file}"
   key_file=""
   trap - EXIT
 
   echo
-  echo "Agent installation finished. Check the server in OpenObserve."
+  echo "Agent installation and end-to-end acceptance checks finished."
 }
 
 case "${1:-help}" in

@@ -1,0 +1,213 @@
+{
+  "version": 8,
+  "dashboardId": "",
+  "title": "OpsPika Host Health",
+  "description": "Ubuntu CPU, load, memory, swap, filesystem, disk, network, process, and uptime telemetry collected by the OpsPika Agent.",
+  "role": "",
+  "owner": "",
+  "tabs": [
+    {
+      "tabId": "host-overview",
+      "name": "Host overview",
+      "panels": [
+        {
+          "id": "host-cpu-utilization",
+          "type": "line",
+          "title": "CPU utilization",
+          "description": "Average non-idle CPU utilization by server.",
+          "config": {"show_legends": true, "legends_position": "bottom", "unit": "percent-1", "decimals": 1, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "100 * (1 - avg by(host_name) (irate(system_cpu_time{state=\"idle\",host_name=~\"$host_name\",deployment_environment_name=~\"$environment\"}[5m])))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {"stream": "system_cpu_time", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}},
+              "config": {"promql_legend": "{host_name}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 0, "y": 0, "w": 96, "h": 18, "i": 1},
+          "htmlContent": "",
+          "markdownContent": "",
+          "customChartContent": ""
+        },
+        {
+          "id": "host-load-average",
+          "type": "line",
+          "title": "Load average (5 minutes)",
+          "description": "Five-minute system load average by server.",
+          "config": {"show_legends": true, "legends_position": "bottom", "decimals": 2, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "system_cpu_load_average_5m{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\"}",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {"stream": "system_cpu_load_average_5m", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}},
+              "config": {"promql_legend": "{host_name}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 96, "y": 0, "w": 96, "h": 18, "i": 2},
+          "htmlContent": "",
+          "markdownContent": "",
+          "customChartContent": ""
+        },
+        {
+          "id": "host-memory-utilization",
+          "type": "line",
+          "title": "Memory utilization",
+          "description": "Used physical memory percentage by server.",
+          "config": {"show_legends": true, "legends_position": "bottom", "unit": "percent-1", "decimals": 1, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "100 * system_memory_utilization{state=\"used\",host_name=~\"$host_name\",deployment_environment_name=~\"$environment\"}",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {"stream": "system_memory_utilization", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}},
+              "config": {"promql_legend": "{host_name}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 0, "y": 18, "w": 96, "h": 18, "i": 3},
+          "htmlContent": "",
+          "markdownContent": "",
+          "customChartContent": ""
+        },
+        {
+          "id": "host-swap-utilization",
+          "type": "line",
+          "title": "Swap utilization",
+          "description": "Used swap percentage by server.",
+          "config": {"show_legends": true, "legends_position": "bottom", "unit": "percent-1", "decimals": 1, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "100 * system_paging_utilization{state=\"used\",host_name=~\"$host_name\",deployment_environment_name=~\"$environment\"}",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {"stream": "system_paging_utilization", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}},
+              "config": {"promql_legend": "{host_name}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 96, "y": 18, "w": 96, "h": 18, "i": 4},
+          "htmlContent": "",
+          "markdownContent": "",
+          "customChartContent": ""
+        },
+        {
+          "id": "host-filesystem-utilization",
+          "type": "line",
+          "title": "Filesystem utilization",
+          "description": "Used filesystem percentage, excluding loop and temporary filesystems.",
+          "config": {"show_legends": true, "legends_position": "bottom", "unit": "percent-1", "decimals": 1, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "100 * system_filesystem_utilization{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\",device!~\"/dev/loop.*\",type!~\"tmpfs|nsfs\"}",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {"stream": "system_filesystem_utilization", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}},
+              "config": {"promql_legend": "{host_name} {mountpoint}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 0, "y": 36, "w": 192, "h": 18, "i": 5},
+          "htmlContent": "",
+          "markdownContent": "",
+          "customChartContent": ""
+        },
+        {
+          "id": "host-disk-throughput",
+          "type": "line",
+          "title": "Disk throughput",
+          "description": "Disk read and write bytes per second by server and direction.",
+          "config": {"show_legends": true, "legends_position": "bottom", "unit": "Bps", "decimals": 1, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "sum by(host_name, direction) (irate(system_disk_io{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\",device!~\"loop.*\"}[5m]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {"stream": "system_disk_io", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}},
+              "config": {"promql_legend": "{host_name} {direction}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 0, "y": 54, "w": 96, "h": 18, "i": 6},
+          "htmlContent": "",
+          "markdownContent": "",
+          "customChartContent": ""
+        },
+        {
+          "id": "host-network-throughput",
+          "type": "line",
+          "title": "Network throughput",
+          "description": "Network receive and transmit bytes per second by server and direction.",
+          "config": {"show_legends": true, "legends_position": "bottom", "unit": "Bps", "decimals": 1, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "sum by(host_name, direction) (irate(system_network_io{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\"}[5m]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {"stream": "system_network_io", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}},
+              "config": {"promql_legend": "{host_name} {direction}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 96, "y": 54, "w": 96, "h": 18, "i": 7},
+          "htmlContent": "",
+          "markdownContent": "",
+          "customChartContent": ""
+        },
+        {
+          "id": "host-uptime",
+          "type": "line",
+          "title": "Host uptime",
+          "description": "Seconds since the operating system booted.",
+          "config": {"show_legends": true, "legends_position": "bottom", "unit": "seconds", "decimals": 0, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "system_uptime{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\"}",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {"stream": "system_uptime", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}},
+              "config": {"promql_legend": "{host_name}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 0, "y": 72, "w": 96, "h": 18, "i": 8},
+          "htmlContent": "",
+          "markdownContent": "",
+          "customChartContent": ""
+        },
+        {
+          "id": "host-process-count",
+          "type": "line",
+          "title": "Process count",
+          "description": "Operating-system process count by status.",
+          "config": {"show_legends": true, "legends_position": "bottom", "decimals": 0, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "system_processes_count{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\"}",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {"stream": "system_processes_count", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}},
+              "config": {"promql_legend": "{host_name} {status}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 96, "y": 72, "w": 96, "h": 18, "i": 9},
+          "htmlContent": "",
+          "markdownContent": "",
+          "customChartContent": ""
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "list": [
+      {"type": "query_values", "name": "environment", "label": "Environment", "query_data": {"stream_type": "metrics", "stream": "system_uptime", "field": "deployment_environment_name", "max_record_size": 100, "filter": []}, "value": "", "options": [], "multiSelect": false, "hideOnDashboard": false, "selectAllValueForMultiSelect": ".*", "customMultiSelectValue": [], "escapeSingleQuotes": false},
+      {"type": "query_values", "name": "host_name", "label": "Server", "query_data": {"stream_type": "metrics", "stream": "system_uptime", "field": "host_name", "max_record_size": 1000, "filter": []}, "value": "", "options": [], "multiSelect": false, "hideOnDashboard": false, "selectAllValueForMultiSelect": ".*", "customMultiSelectValue": [], "escapeSingleQuotes": false}
+    ],
+    "showDynamicFilters": true
+  },
+  "defaultDatetimeDuration": {"type": "relative", "relativeTimePeriod": "15m"}
+}

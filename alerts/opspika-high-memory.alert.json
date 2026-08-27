@@ -1,0 +1,24 @@
+{
+  "name": "opspika_high_memory",
+  "stream_type": "metrics",
+  "stream_name": "system_memory_utilization",
+  "is_real_time": false,
+  "query_condition": {
+    "type": "promql",
+    "conditions": null,
+    "sql": null,
+    "promql": "100 * system_memory_utilization{state=\"used\"}",
+    "promql_condition": {"column": "value", "operator": ">=", "value": 90, "ignore_case": false},
+    "aggregation": null,
+    "vrl_function": null,
+    "search_event_type": null,
+    "multi_time_range": []
+  },
+  "trigger_condition": {"period": 5, "operator": ">=", "threshold": 1, "frequency": 1, "cron": "", "frequency_type": "minutes", "silence": 15, "timezone": "UTC", "tolerance_in_secs": 0},
+  "destinations": [],
+  "context_attributes": {},
+  "row_template": "",
+  "description": "Used physical memory remains at or above 90 percent over a five-minute window.",
+  "enabled": false,
+  "tz_offset": 0
+}

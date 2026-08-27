@@ -9,7 +9,7 @@ release that changes third-party components.
 - [x] Project-owned exporter declares MIT.
 - [x] Third-party component inventory and distribution boundaries are recorded.
 - [x] No third-party source code, dashboard JSON, logos, screenshots, fonts, or
-      binary artifacts are included in the current workspace.
+      binary artifacts are included; dashboard and alert assets are original.
 - [x] Re-check all upstream licenses and version pins immediately before release.
 - [ ] If any dependency is vendored or modified, add its complete license,
       notices, and required source/distribution materials.
@@ -42,9 +42,11 @@ release that changes third-party components.
 - [x] Node.js unit and syntax tests pass.
 - [x] Pinned OpenTelemetry configurations validate.
 - [x] Process exporter passed a disposable PM2 7 integration test.
+- [x] Three original dashboards and seven alert templates pass asset validation.
+- [x] Dashboards, log indexes, alerts, and all 21 panel queries passed against a
+      clean disposable OpenObserve v0.90.3 server.
 - [ ] Run the central and agent Ubuntu acceptance tests.
-- [ ] Export and clean-import dashboards and alerts from the pinned live
-      OpenObserve version.
+- [x] Clean-import dashboards and alerts into the pinned live OpenObserve version.
 
 ## Release Decision
 

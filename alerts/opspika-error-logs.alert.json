@@ -1,0 +1,24 @@
+{
+  "name": "opspika_error_logs",
+  "stream_type": "logs",
+  "stream_name": "pm2_logs",
+  "is_real_time": false,
+  "query_condition": {
+    "type": "sql",
+    "conditions": null,
+    "sql": "SELECT count(*) AS error_count FROM \"pm2_logs\" WHERE pm2_stream = 'error'",
+    "promql": null,
+    "promql_condition": null,
+    "aggregation": null,
+    "vrl_function": null,
+    "search_event_type": "ui",
+    "multi_time_range": []
+  },
+  "trigger_condition": {"period": 5, "operator": ">=", "threshold": 1, "frequency": 1, "cron": "", "frequency_type": "minutes", "silence": 15, "timezone": "UTC", "tolerance_in_secs": 0},
+  "destinations": [],
+  "context_attributes": {},
+  "row_template": "",
+  "description": "At least one process stderr record was ingested during the previous five minutes.",
+  "enabled": false,
+  "tz_offset": 0
+}

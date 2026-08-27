@@ -19,7 +19,7 @@ licenses.
 | BusyBox container | Temporary helper used by backup and guarded restore scripts | [GPL-2.0](https://github.com/mirror/busybox/blob/master/LICENSE) | [BusyBox source mirror](https://github.com/mirror/busybox) |
 | Node.js | Executes the project-owned process exporter on PM2 hosts | [MIT](https://github.com/nodejs/node/blob/main/LICENSE) | [nodejs/node](https://github.com/nodejs/node) |
 
-Ubuntu packages such as `curl`, `tar`, `acl`, `sudo`, `ca-certificates`, and
+Ubuntu packages such as `curl`, `tar`, `acl`, `jq`, `sudo`, `ca-certificates`, and
 OpenSSL are installed from or expected from the operating system and retain the
 licenses published by their Ubuntu/upstream maintainers.
 
@@ -32,7 +32,8 @@ code, tests, and documentation. It intentionally does not contain:
 - OpenTelemetry Collector binaries.
 - PM2 or pm2-logrotate source/packages.
 - Docker, BusyBox, Node.js, or Ubuntu package binaries.
-- Third-party dashboard JSON or visual assets.
+- Third-party dashboard JSON or visual assets; OpsPika dashboard and alert JSON
+  is original project material.
 
 If a future release vendors, modifies, or redistributes any third-party
 component, its license text, notices, corresponding source obligations, and

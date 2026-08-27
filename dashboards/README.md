@@ -1,91 +1,91 @@
-# OpsPika Dashboard and Alert Specification
+# OpsPika Dashboards and Alerts
 
-OpenObserve dashboard JSON is versioned by the running server. To avoid shipping
-an unverified schema, create/export the first dashboard only after the proof of
-concept has ingested real host and PM2 data. The exported JSON then becomes the
-pinned dashboard template in this directory.
+OpsPika ships three original OpenObserve v8 dashboard assets:
 
-## Dashboard 1 — Server Fleet
+| File | Purpose |
+|---|---|
+| `opspika-host-health.dashboard.json` | CPU, load, memory, swap, filesystem, disk, network, process count, and uptime |
+| `opspika-pm2-applications.dashboard.json` | Optional PM2 exporter health and per-application metrics |
+| `opspika-process-logs.dashboard.json` | Error volume, application volume, and latest searchable process logs |
 
-Required panels:
+The central installer imports missing dashboards automatically. Provisioning is
+idempotent and preserves an existing dashboard with the same exact title:
 
-- Server availability and last telemetry timestamp.
-- CPU utilization by server.
-- Load average by server.
-- Used and available memory by server.
-- Swap utilization.
-- Root and mounted filesystem utilization.
-- Disk read/write throughput.
-- Network receive/transmit throughput and errors.
-- Host uptime.
-
-Variables:
-
-- `environment`
-- `host_name`
-
-## Dashboard 2 — PM2 Applications
-
-Required panels:
-
-- Online/errored/stopped application table.
-- CPU and memory by PM2 application and instance.
-- Uptime by application and instance.
-- Restart and unstable-restart counts.
-- Configured versus running instance count.
-- Exporter collection status.
-
-Metrics produced by this project:
-
-```text
-pm2_exporter_collect_success
-pm2_exporter_last_collect_timestamp_seconds
-pm2_process_info
-pm2_process_up
-pm2_process_cpu_percent
-pm2_process_memory_bytes
-pm2_process_uptime_seconds
-pm2_process_restarts
-pm2_process_unstable_restarts
-pm2_app_instances_configured
-pm2_app_instances_running
+```bash
+sudo ./central/scripts/provision-dashboards.sh
 ```
 
-Variables:
+The JSON follows the OpenObserve v8 dashboard contract used by the pinned
+OpenObserve `v0.90.3` API. The disposable API test imports each asset into a
+clean server and executes all 21 panel queries.
+
+## Variables
+
+Host and PM2 dashboards use:
 
 - `environment`
 - `host_name`
+
+PM2 application and log dashboards also use:
+
 - `app`
-- `instance`
 
-## Log View — PM2 Logs
+## Process Log Search
 
-Use stream `pm2_logs` with filters for:
+The `pm2_logs` stream is configured for full-text search on `body` and indexed
+exact-match filtering on:
 
-- `host.name`
-- `deployment.environment.name`
+- `host_name`
+- `deployment_environment_name`
 - `pm2_app`
 - `pm2_stream`
-- `log.file.name`
-- full-text message search
+- `log_file_name`
 
-## Initial Alerts
+Apply the settings after the stream first appears:
 
-- Missing host telemetry.
+```bash
+sudo ./central/scripts/configure-streams.sh
+```
+
+## Alert Templates
+
+Destination-neutral templates live in `../alerts/`:
+
 - Sustained high CPU.
-- Sustained high memory or swap.
+- Sustained high memory.
 - Filesystem near capacity.
-- `pm2_exporter_collect_success != 1`.
-- `pm2_process_up != 1` for an expected application.
-- Restart count increase over an agreed time window.
-- Error log pattern/count threshold.
-- Collector persistent queue growth or export failures.
+- Per-host telemetry missing.
+- PM2 application instance not online.
+- Excessive PM2 restarts.
+- PM2 stderr records detected.
 
-## Template Promotion Checklist
+Repository templates are intentionally disabled and contain no webhook, email,
+or other environment-specific destination. After creating and testing a real
+OpenObserve destination, provision enabled alerts with:
 
-1. Confirm actual OpenObserve field names after OTLP flattening.
-2. Build and visually verify panels in the pinned OpenObserve version.
-3. Export the dashboard from OpenObserve.
-4. Remove instance-specific server names and credentials.
-5. Import into a clean organization and repeat verification.
-6. Commit the verified JSON in this directory.
+```bash
+sudo ./central/scripts/provision-alerts.sh \
+  --destination YOUR_TESTED_DESTINATION \
+  --enable
+```
+
+The provisioner creates one telemetry-loss alert per discovered host, preserves
+same-name alerts, and skips templates whose stream does not exist yet.
+
+## Validation
+
+```bash
+node ./scripts/validate-assets.js
+```
+
+For live API validation, provide the pinned OpenObserve binary in a disposable
+Ubuntu environment:
+
+```bash
+sudo OPENOBSERVE_BINARY=/path/to/openobserve \
+  ./scripts/test-openobserve-api.sh
+```
+
+The live test uses only a unique `/tmp` data directory and removes it afterward.
+No third-party dashboard JSON, screenshots, logos, fonts, or visual assets are
+included in OpsPika.

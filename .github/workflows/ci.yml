@@ -1,0 +1,180 @@
+name: OpsPika CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: opspika-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-and-exporter:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+
+      - name: Install validation tools
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Download pinned Collector
+        id: collector
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          work_dir=$(mktemp -d)
+          asset=otelcol-contrib_0.156.0_linux_amd64.tar.gz
+          curl -fsSL \
+            "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.156.0/${asset}" \
+            -o "${work_dir}/${asset}"
+          printf '%s  %s\n' \
+            'ee70d7b1221be8a9cc4700f48bf985c04b1ab8aaeef24409fe79623849e2f9f2' \
+            "${work_dir}/${asset}" | sha256sum --check --strict -
+          tar -xzf "${work_dir}/${asset}" -C "${work_dir}"
+          echo "binary=${work_dir}/otelcol-contrib" >>"${GITHUB_OUTPUT}"
+
+      - name: Validate source and deployment assets
+        env:
+          OTEL_BINARY: ${{ steps.collector.outputs.binary }}
+        run: ./scripts/validate.sh
+
+      - name: ShellCheck
+        run: shellcheck install.sh central/scripts/*.sh agent/*.sh scripts/*.sh
+
+      - name: PM2 7 integration
+        run: |
+          npm install --global pm2@7.0.4
+          ./scripts/test-pm2-integration.sh
+
+  ubuntu-runtime:
+    needs: static-and-exporter
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      OPSPIKA_CI_EMAIL: opspika-ci@example.com
+      OPSPIKA_CI_PASSWORD: OpsPikaCi1!runtime-validation
+      OPSPIKA_CI_PORT: "15080"
+      OPSPIKA_CI_VOLUME: opspika-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+
+      - name: Install PM2 test runtime
+        run: |
+          set -Eeuo pipefail
+          npm install --global pm2@7.0.4
+          sudo ln -sf "$(command -v node)" /usr/local/bin/node
+          sudo ln -sf "$(command -v pm2)" /usr/local/bin/pm2
+          pm2 start agent/pm2-exporter/test/fixture-app.js --name opspika-ci-app
+          pm2 save
+          old_marker="opspika_old_content_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
+          printf '%s\n' "${old_marker}" >>"${HOME}/.pm2/logs/opspika-ci-app-out.log"
+          echo "OLD_MARKER=${old_marker}" >>"${GITHUB_ENV}"
+
+      - name: Install central OpenObserve
+        run: |
+          set -Eeuo pipefail
+          password_file=$(mktemp)
+          trap 'rm -f -- "${password_file}"' EXIT
+          printf '%s\n' "${OPSPIKA_CI_PASSWORD}" >"${password_file}"
+          chmod 0600 "${password_file}"
+          sudo ./central/scripts/install-central.sh \
+            --root-email "${OPSPIKA_CI_EMAIL}" \
+            --root-password-file "${password_file}" \
+            --http-port "${OPSPIKA_CI_PORT}" \
+            --volume-name "${OPSPIKA_CI_VOLUME}"
+
+      - name: Install PM2-mode agent and run end-to-end acceptance
+        run: |
+          set -Eeuo pipefail
+          key_file=$(mktemp)
+          trap 'rm -f -- "${key_file}"' EXIT
+          printf '%s' "${OPSPIKA_CI_EMAIL}:${OPSPIKA_CI_PASSWORD}" | base64 -w0 >"${key_file}"
+          chmod 0600 "${key_file}"
+          sudo ./agent/install-monitoring-agent.sh \
+            --mode pm2 \
+            --server-name opspika-ci \
+            --environment ci \
+            --openobserve-url "http://127.0.0.1:${OPSPIKA_CI_PORT}/api/default" \
+            --authorization-key-file "${key_file}" \
+            --pm2-user "$(id -un)"
+          sudo ./agent/run-acceptance-test.sh
+
+      - name: Confirm pre-install log content was ignored
+        run: |
+          set -Eeuo pipefail
+          auth=$(printf '%s' "${OPSPIKA_CI_EMAIL}:${OPSPIKA_CI_PASSWORD}" | base64 -w0)
+          start_time=$(( ($(date +%s) - 1800) * 1000000 ))
+          end_time=$(( $(date +%s) * 1000000 ))
+          sql="SELECT count(*) AS event_count FROM \"pm2_logs\" WHERE body = '${OLD_MARKER}'"
+          payload=$(jq -cn --arg sql "${sql}" --argjson start "${start_time}" --argjson end "${end_time}" \
+            '{query:{sql:$sql,start_time:$start,end_time:$end,from:0,size:10},search_type:"ui",timeout:30}')
+          response=$(curl -fsS \
+            -H "Authorization: Basic ${auth}" \
+            -H 'Content-Type: application/json' \
+            --data-binary "${payload}" \
+            "http://127.0.0.1:${OPSPIKA_CI_PORT}/api/default/_search")
+          jq -e '((.hits[0].event_count // 0) | tonumber) == 0' <<<"${response}"
+
+      - name: Configure log indexes and disabled alert templates
+        run: |
+          set -Eeuo pipefail
+          auth=$(printf '%s' "${OPSPIKA_CI_EMAIL}:${OPSPIKA_CI_PASSWORD}" | base64 -w0)
+          curl -fsS \
+            -H "Authorization: Basic ${auth}" \
+            -H 'Content-Type: application/json' \
+            --data-binary '{"name":"opspika_ci","url":"https://example.com/opspika-ci","method":"post","type":"http","template":"Default"}' \
+            "http://127.0.0.1:${OPSPIKA_CI_PORT}/api/default/alerts/destinations" >/dev/null
+          sudo ./central/scripts/configure-streams.sh
+          sudo ./central/scripts/provision-alerts.sh --destination opspika_ci
+          alerts=$(curl -fsS \
+            -H "Authorization: Basic ${auth}" \
+            "http://127.0.0.1:${OPSPIKA_CI_PORT}/api/v2/default/alerts")
+          jq -e '((.list // .alerts // []) | length) >= 7' <<<"${alerts}"
+
+      - name: Verify consistent backup and guarded restore
+        run: |
+          set -Eeuo pipefail
+          backup_dir="${RUNNER_TEMP}/opspika-backups"
+          sudo ./central/scripts/backup-central.sh --output-dir "${backup_dir}"
+          backup_file=$(sudo find "${backup_dir}" -maxdepth 1 -type f -name 'openobserve-*.tar.gz' | sort | tail -1)
+          test -n "${backup_file}"
+          sudo ./central/scripts/restore-central.sh \
+            --backup "${backup_file}" \
+            --confirm-restoration
+          sudo ./central/scripts/verify-central.sh
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          sudo systemctl status opspika-agent.service --no-pager || true
+          sudo journalctl -u opspika-agent.service -n 200 --no-pager || true
+          sudo docker compose --env-file central/.env -f central/compose.yaml ps || true
+          sudo docker compose --env-file central/.env -f central/compose.yaml logs --tail 200 || true
+
+      - name: Cleanup disposable runtime
+        if: always()
+        run: |
+          sudo ./agent/uninstall-monitoring-agent.sh --remove-logrotate --purge-state || true
+          pm2 delete all >/dev/null 2>&1 || true
+          pm2 kill >/dev/null 2>&1 || true
+          if test -f central/.env; then
+            sudo docker compose --env-file central/.env -f central/compose.yaml down -v --remove-orphans || true
+          fi
+          sudo docker volume rm "${OPSPIKA_CI_VOLUME}" >/dev/null 2>&1 || true

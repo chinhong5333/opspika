@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly volume_name="opspika-openobserve-data"
-readonly restore_image="busybox:1.37.0"
+readonly default_volume_name="opspika-openobserve-data"
+readonly restore_image="busybox:1.37.0@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0"
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 central_dir=$(cd -- "${script_dir}/.." && pwd)
 env_file="${central_dir}/.env"
 backup_file=""
 confirmed=false
+allow_missing_checksum=false
 
 usage() {
   cat <<'EOF'
@@ -18,7 +19,8 @@ Usage:
     --confirm-restoration
 
 This replaces all current OpenObserve volume data. A pre-restore backup is
-created automatically before replacement.
+created automatically before replacement. A matching .sha256 file is required
+unless --allow-missing-checksum is supplied explicitly.
 EOF
 }
 
@@ -31,6 +33,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --confirm-restoration)
       confirmed=true
+      shift
+      ;;
+    --allow-missing-checksum)
+      allow_missing_checksum=true
       shift
       ;;
     --help)
@@ -61,17 +67,30 @@ if [[ ${backup_file} != *.tar.gz ]]; then
   echo "--backup must end in .tar.gz." >&2
   exit 2
 fi
+backup_file=$(realpath -e -- "${backup_file}")
 if [[ ! -f ${env_file} ]]; then
   echo "Missing ${env_file}; central OpenObserve is not configured." >&2
   exit 1
 fi
+# shellcheck disable=SC1090
+source "${env_file}"
+volume_name=${OPENOBSERVE_VOLUME_NAME:-${default_volume_name}}
 
 backup_dir=$(dirname -- "${backup_file}")
 backup_name=$(basename -- "${backup_file}")
+case "${backup_dir}" in
+  /|/bin|/boot|/dev|/etc|/home|/opt|/proc|/root|/run|/sbin|/sys|/tmp|/usr|/var)
+    echo "Refusing to mount a broad system directory as the backup source: ${backup_dir}" >&2
+    exit 2
+    ;;
+esac
 if [[ -f ${backup_file}.sha256 ]]; then
   (cd "${backup_dir}" && sha256sum --check "${backup_name}.sha256")
+elif [[ ${allow_missing_checksum} == true ]]; then
+  echo "WARNING: Restoring without a checksum because --allow-missing-checksum was supplied." >&2
 else
-  echo "WARNING: No matching checksum file exists for ${backup_file}." >&2
+  echo "Missing required checksum file: ${backup_file}.sha256" >&2
+  exit 1
 fi
 
 while IFS= read -r archive_path; do
@@ -82,6 +101,11 @@ while IFS= read -r archive_path; do
       ;;
   esac
 done < <(tar -tzf "${backup_file}")
+archive_listing=$(tar -tvzf "${backup_file}")
+if grep -Eq '^[^d-]' <<<"${archive_listing}"; then
+  echo "Archive contains a link, device, or another unsupported entry type." >&2
+  exit 1
+fi
 
 echo "Creating a pre-restore backup of current data."
 "${script_dir}/backup-central.sh" --output-dir "${central_dir}/backups"
@@ -89,7 +113,7 @@ echo "Creating a pre-restore backup of current data."
 compose=(docker compose --env-file "${env_file}" -f "${central_dir}/compose.yaml")
 "${compose[@]}" stop openobserve
 restart_required=true
-# shellcheck disable=SC2329 # Invoked indirectly by the EXIT trap.
+# shellcheck disable=SC2317 # Invoked indirectly by the EXIT trap.
 cleanup() {
   if [[ ${restart_required:-false} == true ]]; then
     "${compose[@]}" start openobserve >/dev/null || true
@@ -108,8 +132,6 @@ docker run --rm \
 restart_required=false
 trap - EXIT
 
-# shellcheck disable=SC1090
-source "${env_file}"
 health_host=${OPENOBSERVE_BIND_ADDRESS}
 if [[ ${health_host} == "0.0.0.0" ]]; then
   health_host="127.0.0.1"

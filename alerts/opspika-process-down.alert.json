@@ -1,0 +1,24 @@
+{
+  "name": "opspika_process_down",
+  "stream_type": "metrics",
+  "stream_name": "pm2_process_up",
+  "is_real_time": false,
+  "query_condition": {
+    "type": "promql",
+    "conditions": null,
+    "sql": null,
+    "promql": "pm2_process_up",
+    "promql_condition": {"column": "value", "operator": "<", "value": 1, "ignore_case": false},
+    "aggregation": null,
+    "vrl_function": null,
+    "search_event_type": null,
+    "multi_time_range": []
+  },
+  "trigger_condition": {"period": 2, "operator": ">=", "threshold": 1, "frequency": 1, "cron": "", "frequency_type": "minutes", "silence": 10, "timezone": "UTC", "tolerance_in_secs": 0},
+  "destinations": [],
+  "context_attributes": {},
+  "row_template": "",
+  "description": "At least one monitored application instance is not online.",
+  "enabled": false,
+  "tz_offset": 0
+}

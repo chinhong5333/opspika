@@ -1,0 +1,112 @@
+{
+  "version": 8,
+  "dashboardId": "",
+  "title": "OpsPika Process Logs",
+  "description": "Search-oriented views for newly ingested application stdout and stderr records from servers using the optional PM2 integration.",
+  "role": "",
+  "owner": "",
+  "tabs": [
+    {
+      "tabId": "log-overview",
+      "name": "Logs",
+      "panels": [
+        {
+          "id": "process-error-volume",
+          "type": "line",
+          "title": "Error-log volume",
+          "description": "Count of stderr records over time for the selected server and application.",
+          "config": {"show_legends": true, "legends_position": "bottom", "decimals": 0, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp) AS ts, count(*) AS errors FROM \"pm2_logs\" WHERE host_name = '$host_name' AND deployment_environment_name = '$environment' AND pm2_app = '$app' AND pm2_stream = 'error' GROUP BY ts ORDER BY ts",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "pm2_logs",
+                "stream_type": "logs",
+                "x": [{"label": "Time", "alias": "ts", "column": "ts", "color": null}],
+                "y": [{"label": "Errors", "alias": "errors", "column": "errors", "color": null}],
+                "z": [],
+                "breakdown": [],
+                "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}
+              },
+              "config": {"promql_legend": "", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 0, "y": 0, "w": 96, "h": 18, "i": 1},
+          "htmlContent": "", "markdownContent": "", "customChartContent": ""
+        },
+        {
+          "id": "process-log-volume-by-app",
+          "type": "bar",
+          "title": "Log volume by application",
+          "description": "Total records by application in the selected time range.",
+          "config": {"show_legends": true, "legends_position": "bottom", "decimals": 0, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT pm2_app AS application, count(*) AS log_count FROM \"pm2_logs\" WHERE host_name = '$host_name' AND deployment_environment_name = '$environment' GROUP BY application ORDER BY log_count DESC",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "pm2_logs",
+                "stream_type": "logs",
+                "x": [{"label": "Application", "alias": "application", "column": "application", "color": null}],
+                "y": [{"label": "Records", "alias": "log_count", "column": "log_count", "color": null}],
+                "z": [],
+                "breakdown": [],
+                "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}
+              },
+              "config": {"promql_legend": "", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 96, "y": 0, "w": 96, "h": 18, "i": 2},
+          "htmlContent": "", "markdownContent": "", "customChartContent": ""
+        },
+        {
+          "id": "process-latest-logs",
+          "type": "table",
+          "title": "Latest process logs",
+          "description": "Latest searchable stdout and stderr records for the selected server and application.",
+          "config": {"show_legends": false, "legends_position": null, "decimals": 0, "axis_border_show": false, "wrap_table_cells": true, "table_dynamic_columns": false, "visible_columns": ["_timestamp", "host_name", "pm2_app", "pm2_stream", "body"], "table_pagination": true, "table_pagination_rows_per_page": 50},
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT _timestamp, host_name, pm2_app, pm2_stream, body FROM \"pm2_logs\" WHERE host_name = '$host_name' AND deployment_environment_name = '$environment' AND pm2_app = '$app' ORDER BY _timestamp DESC LIMIT 500",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "pm2_logs",
+                "stream_type": "logs",
+                "x": [
+                  {"label": "Time", "alias": "_timestamp", "column": "_timestamp", "color": null},
+                  {"label": "Server", "alias": "host_name", "column": "host_name", "color": null},
+                  {"label": "Application", "alias": "pm2_app", "column": "pm2_app", "color": null},
+                  {"label": "Stream", "alias": "pm2_stream", "column": "pm2_stream", "color": null},
+                  {"label": "Message", "alias": "body", "column": "body", "color": null}
+                ],
+                "y": [],
+                "z": [],
+                "breakdown": [],
+                "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}
+              },
+              "config": {"promql_legend": "", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}
+            }
+          ],
+          "layout": {"x": 0, "y": 18, "w": 192, "h": 28, "i": 3},
+          "htmlContent": "", "markdownContent": "", "customChartContent": ""
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "list": [
+      {"type": "query_values", "name": "environment", "label": "Environment", "query_data": {"stream_type": "logs", "stream": "pm2_logs", "field": "deployment_environment_name", "max_record_size": 100, "filter": []}, "value": "", "options": [], "multiSelect": false, "hideOnDashboard": false, "selectAllValueForMultiSelect": "", "customMultiSelectValue": [], "escapeSingleQuotes": true},
+      {"type": "query_values", "name": "host_name", "label": "Server", "query_data": {"stream_type": "logs", "stream": "pm2_logs", "field": "host_name", "max_record_size": 1000, "filter": []}, "value": "", "options": [], "multiSelect": false, "hideOnDashboard": false, "selectAllValueForMultiSelect": "", "customMultiSelectValue": [], "escapeSingleQuotes": true},
+      {"type": "query_values", "name": "app", "label": "Application", "query_data": {"stream_type": "logs", "stream": "pm2_logs", "field": "pm2_app", "max_record_size": 1000, "filter": []}, "value": "", "options": [], "multiSelect": false, "hideOnDashboard": false, "selectAllValueForMultiSelect": "", "customMultiSelectValue": [], "escapeSingleQuotes": true}
+    ],
+    "showDynamicFilters": true
+  },
+  "defaultDatetimeDuration": {"type": "relative", "relativeTimePeriod": "15m"}
+}

@@ -1,0 +1,116 @@
+{
+  "version": 8,
+  "dashboardId": "",
+  "title": "OpsPika Process Applications",
+  "description": "Per-application state, CPU, memory, uptime, restart, and instance telemetry for servers using the optional PM2 integration.",
+  "role": "",
+  "owner": "",
+  "tabs": [
+    {
+      "tabId": "process-overview",
+      "name": "Applications",
+      "panels": [
+        {
+          "id": "process-exporter-health",
+          "type": "line",
+          "title": "Exporter collection health",
+          "description": "One means the latest local process-manager collection succeeded; zero means it failed.",
+          "config": {"show_legends": true, "legends_position": "bottom", "decimals": 0, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [{"query": "pm2_exporter_collect_success{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\"}", "vrlFunctionQuery": "", "customQuery": true, "fields": {"stream": "pm2_exporter_collect_success", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}}, "config": {"promql_legend": "{host_name}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}}],
+          "layout": {"x": 0, "y": 0, "w": 96, "h": 18, "i": 1},
+          "htmlContent": "", "markdownContent": "", "customChartContent": ""
+        },
+        {
+          "id": "process-state",
+          "type": "line",
+          "title": "Application state",
+          "description": "One means the application instance is online; zero means it is not online.",
+          "config": {"show_legends": true, "legends_position": "bottom", "decimals": 0, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [{"query": "pm2_process_up{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\",app=~\"$app\"}", "vrlFunctionQuery": "", "customQuery": true, "fields": {"stream": "pm2_process_up", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}}, "config": {"promql_legend": "{host_name} {app} #{instance}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}}],
+          "layout": {"x": 96, "y": 0, "w": 96, "h": 18, "i": 2},
+          "htmlContent": "", "markdownContent": "", "customChartContent": ""
+        },
+        {
+          "id": "process-cpu",
+          "type": "line",
+          "title": "Application CPU",
+          "description": "CPU percentage reported for every application instance.",
+          "config": {"show_legends": true, "legends_position": "bottom", "unit": "percent-1", "decimals": 1, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [{"query": "pm2_process_cpu_percent{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\",app=~\"$app\"}", "vrlFunctionQuery": "", "customQuery": true, "fields": {"stream": "pm2_process_cpu_percent", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}}, "config": {"promql_legend": "{host_name} {app} #{instance}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}}],
+          "layout": {"x": 0, "y": 18, "w": 96, "h": 18, "i": 3},
+          "htmlContent": "", "markdownContent": "", "customChartContent": ""
+        },
+        {
+          "id": "process-memory",
+          "type": "line",
+          "title": "Application memory",
+          "description": "Resident memory reported for every application instance.",
+          "config": {"show_legends": true, "legends_position": "bottom", "unit": "bytes", "decimals": 1, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [{"query": "pm2_process_memory_bytes{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\",app=~\"$app\"}", "vrlFunctionQuery": "", "customQuery": true, "fields": {"stream": "pm2_process_memory_bytes", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}}, "config": {"promql_legend": "{host_name} {app} #{instance}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}}],
+          "layout": {"x": 96, "y": 18, "w": 96, "h": 18, "i": 4},
+          "htmlContent": "", "markdownContent": "", "customChartContent": ""
+        },
+        {
+          "id": "process-uptime",
+          "type": "line",
+          "title": "Application uptime",
+          "description": "Seconds since each application instance started.",
+          "config": {"show_legends": true, "legends_position": "bottom", "unit": "seconds", "decimals": 0, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [{"query": "pm2_process_uptime_seconds{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\",app=~\"$app\"}", "vrlFunctionQuery": "", "customQuery": true, "fields": {"stream": "pm2_process_uptime_seconds", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}}, "config": {"promql_legend": "{host_name} {app} #{instance}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}}],
+          "layout": {"x": 0, "y": 36, "w": 96, "h": 18, "i": 5},
+          "htmlContent": "", "markdownContent": "", "customChartContent": ""
+        },
+        {
+          "id": "process-restarts",
+          "type": "line",
+          "title": "Restart count",
+          "description": "Cumulative restarts reported for every application instance.",
+          "config": {"show_legends": true, "legends_position": "bottom", "decimals": 0, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [{"query": "pm2_process_restarts{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\",app=~\"$app\"}", "vrlFunctionQuery": "", "customQuery": true, "fields": {"stream": "pm2_process_restarts", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}}, "config": {"promql_legend": "{host_name} {app} #{instance}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}}],
+          "layout": {"x": 96, "y": 36, "w": 96, "h": 18, "i": 6},
+          "htmlContent": "", "markdownContent": "", "customChartContent": ""
+        },
+        {
+          "id": "process-unstable-restarts",
+          "type": "line",
+          "title": "Unstable restart count",
+          "description": "Cumulative unstable restarts reported for every application instance.",
+          "config": {"show_legends": true, "legends_position": "bottom", "decimals": 0, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [{"query": "pm2_process_unstable_restarts{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\",app=~\"$app\"}", "vrlFunctionQuery": "", "customQuery": true, "fields": {"stream": "pm2_process_unstable_restarts", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}}, "config": {"promql_legend": "{host_name} {app} #{instance}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}}],
+          "layout": {"x": 0, "y": 54, "w": 96, "h": 18, "i": 7},
+          "htmlContent": "", "markdownContent": "", "customChartContent": ""
+        },
+        {
+          "id": "process-instance-capacity",
+          "type": "line",
+          "title": "Configured and running instances",
+          "description": "Configured instance target compared with online instances for each application.",
+          "config": {"show_legends": true, "legends_position": "bottom", "decimals": 0, "axis_border_show": false, "connect_nulls": false},
+          "queryType": "promql",
+          "queries": [
+            {"query": "pm2_app_instances_configured{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\",app=~\"$app\"}", "vrlFunctionQuery": "", "customQuery": true, "fields": {"stream": "pm2_app_instances_configured", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}}, "config": {"promql_legend": "configured {host_name} {app}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}},
+            {"query": "pm2_app_instances_running{host_name=~\"$host_name\",deployment_environment_name=~\"$environment\",app=~\"$app\"}", "vrlFunctionQuery": "", "customQuery": true, "fields": {"stream": "pm2_app_instances_running", "stream_type": "metrics", "x": [], "y": [], "z": [], "breakdown": [], "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []}}, "config": {"promql_legend": "running {host_name} {app}", "layer_type": "scatter", "weight_fixed": 1, "time_shift": []}}
+          ],
+          "layout": {"x": 96, "y": 54, "w": 96, "h": 18, "i": 8},
+          "htmlContent": "", "markdownContent": "", "customChartContent": ""
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "list": [
+      {"type": "query_values", "name": "environment", "label": "Environment", "query_data": {"stream_type": "metrics", "stream": "pm2_process_up", "field": "deployment_environment_name", "max_record_size": 100, "filter": []}, "value": "", "options": [], "multiSelect": false, "hideOnDashboard": false, "selectAllValueForMultiSelect": ".*", "customMultiSelectValue": [], "escapeSingleQuotes": false},
+      {"type": "query_values", "name": "host_name", "label": "Server", "query_data": {"stream_type": "metrics", "stream": "pm2_process_up", "field": "host_name", "max_record_size": 1000, "filter": []}, "value": "", "options": [], "multiSelect": false, "hideOnDashboard": false, "selectAllValueForMultiSelect": ".*", "customMultiSelectValue": [], "escapeSingleQuotes": false},
+      {"type": "query_values", "name": "app", "label": "Application", "query_data": {"stream_type": "metrics", "stream": "pm2_process_up", "field": "app", "max_record_size": 1000, "filter": []}, "value": "", "options": [], "multiSelect": false, "hideOnDashboard": false, "selectAllValueForMultiSelect": ".*", "customMultiSelectValue": [], "escapeSingleQuotes": false}
+    ],
+    "showDynamicFilters": true
+  },
+  "defaultDatetimeDuration": {"type": "relative", "relativeTimePeriod": "15m"}
+}

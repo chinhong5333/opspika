@@ -22,6 +22,9 @@ receivers:
             enabled: true
       disk:
       filesystem:
+        metrics:
+          system.filesystem.utilization:
+            enabled: true
         exclude_fs_types:
           fs_types:
             - autofs
@@ -47,8 +50,14 @@ receivers:
           match_type: strict
       load:
       memory:
+        metrics:
+          system.memory.utilization:
+            enabled: true
       network:
       paging:
+        metrics:
+          system.paging.utilization:
+            enabled: true
       processes:
       system:
 

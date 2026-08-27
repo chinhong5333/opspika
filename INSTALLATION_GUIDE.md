@@ -15,10 +15,11 @@ configuration files.
 
 You need:
 
+- Ubuntu 22.04 or 24.04 LTS x86-64 servers for the supported production path.
 - One Ubuntu server for central OpenObserve.
 - This project copied or cloned to `/opt/opspika` on each server.
 - Your reverse proxy/domain pointing to the central server after installation.
-- The Unix username that runs PM2 on each monitored PM2 server.
+- PM2 only on servers where PM2-specific monitoring is required.
 
 OpenObserve listens on port `5080`. This project does not install or configure
 your reverse proxy.
@@ -30,7 +31,7 @@ your reverse proxy.
 ```bash
 sudo apt-get update
 sudo apt-get install -y git
-sudo git clone YOUR_REPOSITORY_URL /opt/opspika
+sudo git clone https://github.com/chinhong5333/opspika.git /opt/opspika
 cd /opt/opspika
 sudo chmod +x install.sh central/scripts/*.sh agent/*.sh scripts/*.sh
 ```
@@ -91,6 +92,12 @@ The example above assumes the default `5080` port.
 
 The installer prints a generated root password. Save it immediately.
 
+It also imports these dashboards automatically:
+
+- **OpsPika Host Health**
+- **OpsPika Process Applications**
+- **OpsPika Process Logs**
+
 ## 3. Log In and Copy the Agent Key
 
 Open your domain in a browser and log in.
@@ -142,14 +149,14 @@ Authorization key: paste the copied base64 key
 If the central server also has an active PM2 daemon, PM2 mode is selected
 automatically.
 
-## 5. Install Every PM2 Server
+## 5. Install Every Monitored Server
 
-On each PM2 Ubuntu server, copy the project:
+On each Ubuntu server, copy the project:
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y git
-sudo git clone YOUR_REPOSITORY_URL /opt/opspika
+sudo git clone https://github.com/chinhong5333/opspika.git /opt/opspika
 cd /opt/opspika
 sudo chmod +x install.sh central/scripts/*.sh agent/*.sh scripts/*.sh
 ```
@@ -161,9 +168,10 @@ pm2 list
 sudo ./install.sh agent
 ```
 
-Run `pm2 list` as the normal PM2 application user before invoking the installer.
-This ensures the daemon is active and its Unix owner can be detected. The quick
-installer then asks only for:
+If the server uses PM2, run `pm2 list` as the normal application user before
+invoking the installer. This ensures the daemon is active and its Unix owner can
+be detected. Without an active PM2 daemon, the same command installs host-only
+monitoring. The quick installer asks only for:
 
 ```text
 OpenObserve base URL: https://monitor.yourdomain.com
@@ -179,9 +187,11 @@ The installer automatically:
 - Installs and configures `pm2-logrotate`.
 - Creates persistent log offsets and delivery queues.
 - Starts services on boot.
-- Runs local verification.
+- Verifies host metrics in OpenObserve end to end.
+- In PM2 mode, writes a disposable synthetic log, verifies exactly-once search
+  results across a Collector restart, and removes the local test file.
 
-## 6. Check the OpenObserve UI
+## 6. Check the OpenObserve UI and Enable Alerts
 
 Within approximately one minute:
 
@@ -189,8 +199,31 @@ Within approximately one minute:
 2. Search for metrics beginning with `pm2_`.
 3. Open **Logs** and choose the `pm2_logs` stream.
 4. Wait for a new application log line and confirm it appears.
+5. Open **Dashboards** and confirm all three OpsPika dashboards are present.
 
 The existing 21 GB+ PM2 log content is intentionally not imported.
+
+For fast process-log filtering, apply the stream indexes after `pm2_logs` first
+appears:
+
+```bash
+cd /opt/opspika
+sudo ./central/scripts/configure-streams.sh
+```
+
+Create and test an alert destination in the OpenObserve UI. Then provision and
+enable the OpsPika alerts with that exact destination name:
+
+```bash
+cd /opt/opspika
+sudo ./central/scripts/provision-alerts.sh \
+  --destination YOUR_TESTED_DESTINATION \
+  --enable
+```
+
+The command creates host CPU, memory, filesystem, telemetry-loss, PM2 state,
+restart, and error-log alerts. It safely skips PM2-specific templates until PM2
+streams exist and can be rerun later.
 
 ---
 
@@ -208,6 +241,13 @@ Monitoring agent:
 ```bash
 cd /opt/opspika
 sudo ./agent/verify-monitoring-agent.sh
+```
+
+Full end-to-end agent acceptance:
+
+```bash
+cd /opt/opspika
+sudo ./agent/run-acceptance-test.sh
 ```
 
 Create a central backup:
@@ -237,3 +277,6 @@ Every underlying script has built-in help:
 ./agent/uninstall-monitoring-agent.sh --help
 ./central/scripts/restore-central.sh --help
 ```
+
+Before expanding beyond the first monitored server, complete
+[PRODUCTION_READINESS.md](PRODUCTION_READINESS.md).

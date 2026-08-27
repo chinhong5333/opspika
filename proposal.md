@@ -1,6 +1,6 @@
 # OpsPika Server Monitoring Platform Proposal
 
-**Status:** Proposed for development planning
+**Status:** Production candidate implemented; site acceptance pending
 **Proposal date:** 2026-08-26
 **Development planning kickoff:** 2026-08-27
 
@@ -79,7 +79,7 @@ OpenObserve provides the single operational backend and interface for:
 - Retention policies.
 - Organizations and local user accounts.
 
-For the proof of concept, OpenObserve will run as a pinned Docker image with a persistent local volume. S3-compatible object storage and a highly available deployment are deferred until scale or recovery requirements justify them.
+For the initial supported single-node deployment, OpenObserve runs as a digest-pinned Docker image with a persistent local volume. S3-compatible object storage and a highly available deployment remain separate architectures for organizations whose durability or availability requirements exceed the documented single-node scope.
 
 ### 5.2 OpenTelemetry Collector Contrib
 
@@ -148,7 +148,7 @@ The simplified design does **not** require separate installations of:
 - Grafana.
 - Prometheus.
 - OpenSearch.
-- MySQL or PostgreSQL for the proof of concept.
+- MySQL or PostgreSQL for the supported single-node topology.
 - node_exporter as a separate process.
 - Fluent Bit as a separate process.
 - Crontab entries for monitoring.
@@ -213,12 +213,12 @@ The collector must use durable buffering so a temporary OpenObserve or network o
 
 OpenObserve is the only separately managed monitoring data backend in the simplified design.
 
-- Logs and metrics are retained in the OpenObserve data volume for the proof of concept.
+- Logs and metrics are retained in the OpenObserve data volume for the supported single-node topology.
 - The collector's local file storage contains checkpoints and pending delivery buffers only; it is not a second monitoring database.
 - Initial metric retention target: 180 days (approximately six months), configurable.
 - Initial searchable log retention target: 180 days (approximately six months), configurable.
 - Initial local rotated PM2 log retention: 2–7 days as a delivery safety buffer.
-- Storage consumption, ingest rate, and retention must be measured during the proof of concept before final production sizing.
+- Storage consumption, ingest rate, and retention must be measured on representative workloads before broad production rollout.
 
 ## 10. Authentication and Administration
 
@@ -302,7 +302,7 @@ No monitoring function requires crontab. Updates should be explicit and versione
 
 Thresholds and notification destinations will be finalized during development planning.
 
-## 14. Acceptance Criteria for the Proof of Concept
+## 14. Production Acceptance Criteria
 
 1. OpenObserve starts from the central Compose deployment and survives container recreation with its data intact.
 2. Root can log in, create an organization admin, and create a member.
@@ -325,11 +325,11 @@ Thresholds and notification destinations will be finalized during development pl
 - The PM2 exporter is project-owned code and becomes a maintained component, although it has no third-party runtime dependencies.
 - Poorly structured or timestamp-free application logs reduce search quality.
 - Incorrect collector queue/storage settings can cause data loss during long outages.
-- Local single-node storage is appropriate for the proof of concept but not automatically highly available.
+- Local single-node storage is supported within its documented recovery model but is not highly available.
 
-## 16. Development Planning Kickoff
+## 16. Production Validation
 
-The development plan on 2026-08-27 should begin by confirming:
+Production deployment must confirm:
 
 1. Number of PM2 servers and their Linux distributions/architectures.
 2. PM2 Unix users and whether one server can host multiple PM2 daemons.
@@ -340,9 +340,9 @@ The development plan on 2026-08-27 should begin by confirming:
 7. Required alert channels.
 8. Whether true streaming live tail is mandatory or a sub-five-second view is acceptable.
 
-Recommended implementation order:
+Required rollout order:
 
-1. Central OpenObserve proof of concept.
+1. Central OpenObserve installation and acceptance.
 2. Collector host metrics from one PM2 server.
 3. PM2 metrics exporter.
 4. New-content-only PM2 log ingestion and search.

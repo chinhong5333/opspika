@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly volume_name="opspika-openobserve-data"
-readonly backup_image="busybox:1.37.0"
+readonly default_volume_name="opspika-openobserve-data"
+readonly backup_image="busybox:1.37.0@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0"
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 central_dir=$(cd -- "${script_dir}/.." && pwd)
@@ -40,12 +40,27 @@ if [[ ! -f ${env_file} ]]; then
   echo "Missing ${env_file}; central OpenObserve is not configured." >&2
   exit 1
 fi
+# shellcheck disable=SC1090
+source "${env_file}"
+volume_name=${OPENOBSERVE_VOLUME_NAME:-${default_volume_name}}
 if [[ ${output_dir} != /* ]]; then
   echo "--output-dir must be an absolute path." >&2
   exit 2
 fi
+output_dir=$(realpath -m -- "${output_dir}")
+case "${output_dir}" in
+  /|/bin|/boot|/dev|/etc|/home|/opt|/proc|/root|/run|/sbin|/sys|/tmp|/usr|/var)
+    echo "Refusing to use a broad system directory as --output-dir: ${output_dir}" >&2
+    exit 2
+    ;;
+esac
 
-install -d -m 0700 "${output_dir}"
+if [[ ! -e ${output_dir} ]]; then
+  install -d -m 0700 "${output_dir}"
+elif [[ ! -d ${output_dir} ]]; then
+  echo "--output-dir exists but is not a directory: ${output_dir}" >&2
+  exit 2
+fi
 docker volume inspect "${volume_name}" >/dev/null
 docker pull "${backup_image}" >/dev/null
 compose=(docker compose --env-file "${env_file}" -f "${central_dir}/compose.yaml")
@@ -68,7 +83,7 @@ docker run --rm \
   "${backup_image}" \
   tar -C /source -czf "/backup/${archive_name}" .
 
-sha256sum "${output_dir}/${archive_name}" >"${output_dir}/${archive_name}.sha256"
+(cd "${output_dir}" && sha256sum "${archive_name}" >"${archive_name}.sha256")
 "${compose[@]}" start openobserve
 restart_required=false
 trap - EXIT

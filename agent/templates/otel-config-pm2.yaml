@@ -22,6 +22,9 @@ receivers:
             enabled: true
       disk:
       filesystem:
+        metrics:
+          system.filesystem.utilization:
+            enabled: true
         exclude_fs_types:
           fs_types:
             - autofs
@@ -47,8 +50,14 @@ receivers:
           match_type: strict
       load:
       memory:
+        metrics:
+          system.memory.utilization:
+            enabled: true
       network:
       paging:
+        metrics:
+          system.paging.utilization:
+            enabled: true
       processes:
       system:
 
@@ -68,9 +77,13 @@ receivers:
       - __PM2_HOME__/logs/*.gz
       - __PM2_HOME__/logs/opspika-process-exporter-*.log
     start_at: end
+    file_cache_advise: true
+    max_log_size: 1MiB
     include_file_name: true
     include_file_path: true
     storage: file_storage
+    multiline:
+      line_start_pattern: '^\S'
     retry_on_failure:
       enabled: true
       initial_interval: 1s

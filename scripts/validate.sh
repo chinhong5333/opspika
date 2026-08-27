@@ -9,11 +9,17 @@ shell_scripts=(
   central/scripts/install-docker-ubuntu.sh
   central/scripts/install-central.sh
   central/scripts/verify-central.sh
+  central/scripts/provision-dashboards.sh
+  central/scripts/configure-streams.sh
+  central/scripts/provision-alerts.sh
   central/scripts/backup-central.sh
   central/scripts/restore-central.sh
   agent/install-monitoring-agent.sh
   agent/verify-monitoring-agent.sh
+  agent/run-acceptance-test.sh
   agent/uninstall-monitoring-agent.sh
+  scripts/test-pm2-integration.sh
+  scripts/test-openobserve-api.sh
   scripts/validate.sh
 )
 
@@ -24,8 +30,27 @@ echo "Bash syntax validation passed."
 
 node --check "${repo_dir}/agent/pm2-exporter/server.js"
 node --check "${repo_dir}/agent/pm2-exporter/metrics.js"
+node --check "${repo_dir}/scripts/validate-assets.js"
 node --test "${repo_dir}"/agent/pm2-exporter/test/*.test.js
+node "${repo_dir}/scripts/validate-assets.js"
 echo "PM2 exporter validation passed."
+
+grep -Eq '^OPENOBSERVE_IMAGE=[^[:space:]]+@sha256:[a-f0-9]{64}$' \
+  "${repo_dir}/central/.env.example" || {
+    echo "OpenObserve image must be pinned by immutable sha256 digest." >&2
+    exit 1
+  }
+grep -Eq '^readonly OTEL_SHA256_AMD64="[a-f0-9]{64}"$' \
+  "${repo_dir}/agent/install-monitoring-agent.sh" || {
+    echo "Collector amd64 checksum pin is missing." >&2
+    exit 1
+  }
+grep -Eq '^readonly OTEL_SHA256_ARM64="[a-f0-9]{64}"$' \
+  "${repo_dir}/agent/install-monitoring-agent.sh" || {
+    echo "Collector arm64 checksum pin is missing." >&2
+    exit 1
+  }
+echo "Artifact pin validation passed."
 
 if [[ -n ${otel_binary} ]]; then
   [[ -x ${otel_binary} ]] || {
@@ -57,6 +82,7 @@ fi
 required_docs=(
   README.md
   INSTALLATION_GUIDE.md
+  PRODUCTION_READINESS.md
   LICENSE
   THIRD_PARTY_NOTICES.md
   PUBLIC_RELEASE_CHECKLIST.md

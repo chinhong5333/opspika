@@ -1,0 +1,24 @@
+{
+  "name": "opspika_process_restarts",
+  "stream_type": "metrics",
+  "stream_name": "pm2_process_restarts",
+  "is_real_time": false,
+  "query_condition": {
+    "type": "promql",
+    "conditions": null,
+    "sql": null,
+    "promql": "increase(pm2_process_restarts[10m])",
+    "promql_condition": {"column": "value", "operator": ">=", "value": 3, "ignore_case": false},
+    "aggregation": null,
+    "vrl_function": null,
+    "search_event_type": null,
+    "multi_time_range": []
+  },
+  "trigger_condition": {"period": 10, "operator": ">=", "threshold": 1, "frequency": 1, "cron": "", "frequency_type": "minutes", "silence": 30, "timezone": "UTC", "tolerance_in_secs": 0},
+  "destinations": [],
+  "context_attributes": {},
+  "row_template": "",
+  "description": "An application instance restarted at least three times during ten minutes.",
+  "enabled": false,
+  "tz_offset": 0
+}

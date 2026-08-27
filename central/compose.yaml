@@ -3,8 +3,11 @@ name: opspika
 services:
   openobserve:
     image: ${OPENOBSERVE_IMAGE:?Set OPENOBSERVE_IMAGE in central/.env}
-    container_name: opspika-openobserve
+    init: true
     restart: unless-stopped
+    stop_grace_period: 60s
+    security_opt:
+      - no-new-privileges:true
     environment:
       ZO_LOCAL_MODE: "true"
       ZO_DATA_DIR: /data
@@ -26,7 +29,14 @@ services:
       nofile:
         soft: 65535
         hard: 65535
+    logging:
+      driver: local
+      options:
+        max-size: 20m
+        max-file: "5"
 
 volumes:
   openobserve-data:
-    name: opspika-openobserve-data
+    name: ${OPENOBSERVE_VOLUME_NAME:-opspika-openobserve-data}
+    labels:
+      io.opspika.component: central-data

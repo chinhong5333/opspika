@@ -12,10 +12,12 @@ server runs a hardened OpenTelemetry-based agent through `systemd`.
 
 ## Status
 
-The deployment package is implemented and statically verified. The remaining
-milestone is a live proof of concept on one central Ubuntu server and one PM2
-Ubuntu server, followed by export of dashboard and alert templates verified
-against the live OpenObserve schema.
+OpsPika is a production candidate for its documented single-node deployment
+scope. The repository includes immutable runtime pins, importable dashboards,
+alert templates, end-to-end agent acceptance checks, backup/restore tooling,
+and Ubuntu runtime CI. A release is production-ready only when its CI is green
+and the target site passes the TLS, capacity, backup, and notification checks in
+[PRODUCTION_READINESS.md](PRODUCTION_READINESS.md).
 
 ## Architecture
 
@@ -50,7 +52,7 @@ The central command asks only for:
 - Local OpenObserve port, default `5080`.
 
 It automatically binds to `127.0.0.1` for the user's reverse proxy and keeps
-data for 180 days by default.
+data for 180 days by default. It also imports the three OpsPika dashboards.
 
 The agent command automatically determines:
 
@@ -61,7 +63,10 @@ The agent command automatically determines:
 - `default` as the OpenObserve organization.
 
 It asks only for the OpenObserve base URL and protected authorization key unless
-multiple PM2 daemon owners require an explicit choice.
+multiple PM2 daemon owners require an explicit choice. Installation finishes by
+verifying current host metrics in OpenObserve. PM2 mode also writes a disposable
+synthetic log, verifies exactly-once ingestion across a Collector restart, and
+removes the local test file.
 
 ## Capabilities
 
@@ -71,7 +76,9 @@ multiple PM2 daemon owners require an explicit choice.
 - New PM2 stdout/stderr lines only; existing large logs are not imported.
 - Persistent file offsets and disk-backed delivery queues.
 - Full-text log search and near-real-time viewing in OpenObserve.
-- Dashboards, alerts, organizations, and local user accounts.
+- Three provisioned dashboards for host health, process applications, and logs.
+- Seven idempotently provisioned alert templates with per-host telemetry alerts.
+- Organizations and local user accounts.
 - Automatic PM2 log rotation with seven compressed local rotations.
 - Central backup, guarded restore, verification, and agent uninstall tooling.
 - No monitoring cron jobs.
@@ -98,9 +105,12 @@ domain to each agent.
 install.sh                  Interactive central/agent entry point
 central/                    OpenObserve Compose and lifecycle operations
 agent/                      Ubuntu agent, exporter, templates, and verification
-dashboards/                 Dashboard and alert specification
-scripts/validate.sh         Static and component validation
+dashboards/                 Importable OpenObserve v8 dashboard assets
+alerts/                     Destination-neutral OpenObserve alert templates
+scripts/                    Static, component, and disposable API validation
+.github/workflows/ci.yml    Ubuntu 22.04/24.04 production acceptance CI
 INSTALLATION_GUIDE.md       Simple Ubuntu operator guide
+PRODUCTION_READINESS.md     Supported scope and release gates
 proposal.md                 Architecture and accepted requirements
 ```
 
@@ -109,9 +119,10 @@ remain local development records.
 
 ## Pinned Components
 
-- OpenObserve OSS: `v0.90.3`
-- OpenTelemetry Collector Contrib: `v0.156.0`
+- OpenObserve OSS: `v0.90.3`, pinned by multi-platform image digest
+- OpenTelemetry Collector Contrib: `v0.156.0`, pinned by architecture-specific SHA-256
 - pm2-logrotate: `3.0.0`
+- BusyBox backup helper: `1.37.0`, pinned by multi-platform image digest
 - OpsPika Process Exporter: `0.1.0`, dependency-free
 
 Do not replace pinned versions with `latest` without backup, changelog review,
@@ -123,18 +134,27 @@ Current local validation includes:
 
 - Bash syntax and ShellCheck.
 - Node.js unit tests and syntax checks.
+- Dashboard and alert asset-contract validation.
 - Host and PM2 Collector configuration validation against the pinned Collector.
-- A disposable PM2 7 integration test against the real exporter endpoint.
+- A disposable PM2 `7.0.4` integration test against the real exporter endpoint.
+- A clean, disposable OpenObserve `v0.90.3` server test that imported all three
+  dashboards, applied log indexes, provisioned seven alerts, and successfully
+  executed all 21 dashboard queries.
+- GitHub Actions runtime jobs for Ubuntu 22.04 and 24.04 covering Docker,
+  systemd, ACLs, OTLP delivery, old-log exclusion, dashboards, alerts, backup,
+  and guarded restore.
 
-Live Docker, systemd, ACL, OTLP ingestion, dashboard, alert, outage, rotation,
-reboot, backup, and restore validation requires the target Ubuntu servers.
+Site-specific TLS, notification delivery, storage sizing, off-host backups, and
+reboot recovery still must be verified on the actual infrastructure before a
+production rollout.
 
 ## Documentation
 
 - [Installation guide](INSTALLATION_GUIDE.md)
 - [Central operations](central/README.md)
 - [Agent details](agent/README.md)
-- [Dashboard and alert specification](dashboards/README.md)
+- [Dashboards and alerts](dashboards/README.md)
+- [Production readiness](PRODUCTION_READINESS.md)
 - [Architecture proposal](proposal.md)
 - [Public release checklist](PUBLIC_RELEASE_CHECKLIST.md)
 

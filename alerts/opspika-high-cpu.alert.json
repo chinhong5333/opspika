@@ -1,0 +1,24 @@
+{
+  "name": "opspika_high_cpu",
+  "stream_type": "metrics",
+  "stream_name": "system_cpu_time",
+  "is_real_time": false,
+  "query_condition": {
+    "type": "promql",
+    "conditions": null,
+    "sql": null,
+    "promql": "100 * (1 - avg by(host_name) (irate(system_cpu_time{state=\"idle\"}[5m])))",
+    "promql_condition": {"column": "value", "operator": ">=", "value": 85, "ignore_case": false},
+    "aggregation": null,
+    "vrl_function": null,
+    "search_event_type": null,
+    "multi_time_range": []
+  },
+  "trigger_condition": {"period": 5, "operator": ">=", "threshold": 1, "frequency": 1, "cron": "", "frequency_type": "minutes", "silence": 15, "timezone": "UTC", "tolerance_in_secs": 0},
+  "destinations": [],
+  "context_attributes": {},
+  "row_template": "",
+  "description": "CPU utilization remains at or above 85 percent over a five-minute window.",
+  "enabled": false,
+  "tz_offset": 0
+}

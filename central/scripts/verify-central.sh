@@ -16,6 +16,7 @@ fi
 
 # shellcheck disable=SC1090
 source "${env_file}"
+volume_name=${OPENOBSERVE_VOLUME_NAME:-opspika-openobserve-data}
 compose=(docker compose --env-file "${env_file}" -f "${central_dir}/compose.yaml")
 health_host=${OPENOBSERVE_BIND_ADDRESS}
 if [[ ${health_host} == "0.0.0.0" ]]; then
@@ -25,5 +26,5 @@ fi
 "${compose[@]}" ps
 curl -fsS "http://${health_host}:${OPENOBSERVE_HTTP_PORT}/healthz"
 echo
-docker volume inspect opspika-openobserve-data >/dev/null
+docker volume inspect "${volume_name}" >/dev/null
 echo "OpenObserve container, HTTP health endpoint, and persistent volume are available."
