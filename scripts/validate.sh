@@ -87,8 +87,6 @@ required_docs=(
   THIRD_PARTY_NOTICES.md
   PUBLIC_RELEASE_CHECKLIST.md
   proposal.md
-  _IMPLEMENTATION_PLAN.md
-  _IMPLEMENTATION_LOG.md
 )
 for document in "${required_docs[@]}"; do
   [[ -s ${repo_dir}/${document} ]] || {
